@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>ReciStation 🌿 Separa y pesa</title>
+<title>Guacamayos 🌿 Separa y pesa</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
@@ -217,6 +217,19 @@
   }
   .toast.show{opacity:1; transform:translate(-50%,-6px);}
 
+  /* ---------- Modal ---------- */
+  .modal-overlay{
+    position:fixed; inset:0; background:rgba(31,59,45,.45); z-index:60;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .modal-card{
+    background:var(--card); border-radius:var(--radius); padding:26px 22px; max-width:360px;
+    width:100%; text-align:center; box-shadow:var(--shadow);
+  }
+  .modal-emoji{font-size:42px; margin-bottom:8px;}
+  .modal-card h3{font-size:19px; color:var(--forest); margin-bottom:8px;}
+  .modal-card p{font-size:14px; color:var(--forest-soft); line-height:1.5;}
+
   .add-station-form{display:flex; flex-direction:column; gap:8px; margin-top:14px;}
   .add-station-form input{padding:10px 12px; border-radius:12px; border:2px solid var(--cream-2); font-family:'Nunito'; font-size:14px;}
 
@@ -241,13 +254,13 @@
   <!-- ============ VISTA: CARGANDO ============ -->
   <div id="view-loading" class="auth-wrap">
     <div class="spinner"></div>
-    <p style="color:var(--forest-soft); font-size:14px;">Cargando ReciStation...</p>
+    <p style="color:var(--forest-soft); font-size:14px;">Cargando Guacamayos...</p>
   </div>
 
   <!-- ============ VISTA: LOGIN ============ -->
   <div id="view-login" class="auth-wrap hidden">
     <div class="auth-logo">🌿♻️</div>
-    <h1>ReciStation</h1>
+    <h1>Guacamayos</h1>
     <p class="tagline">Separa, pesa y recicla en la estación más cercana. Fácil, rápido y bueno para el planeta.</p>
     <div class="auth-card">
       <div id="login-error" class="error-msg"></div>
@@ -262,6 +275,7 @@
       <button class="btn btn-primary" id="btn-login">🔓 Iniciar sesión</button>
       <button class="btn btn-google" id="btn-google">🔵 Continuar con Google</button>
       <div class="switcher">¿Primera vez aquí? <b id="go-register">Crear cuenta</b></div>
+      <div class="switcher"><b id="go-guest">Continuar sin cuenta</b></div>
     </div>
   </div>
 
@@ -286,18 +300,34 @@
       </div>
       <button class="btn btn-primary" id="btn-register">🌿 Crear cuenta</button>
       <div class="switcher">¿Ya tienes cuenta? <b id="go-login">Inicia sesión</b></div>
+      <div class="switcher"><b id="go-guest-2">Continuar sin cuenta</b></div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: RECOMENDACIÓN DE REGISTRO ============ -->
+  <div id="modal-register-overlay" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-emoji">💾</div>
+      <h3>Guarda tu historial de pesajes</h3>
+      <p>Estás usando Guacamayos sin cuenta. Puedes seguir pesando libremente, pero si creas una cuenta gratis podemos guardar tus registros de pesaje y mostrarte tu historial más adelante.</p>
+      <div class="btn-row" style="margin-top:16px;">
+        <button class="btn btn-outline" id="modal-continue-guest">Continuar sin guardar</button>
+        <button class="btn btn-primary" id="modal-go-register">Crear cuenta</button>
+      </div>
+      <div class="switcher" style="margin-top:10px;"><b id="modal-go-login">Ya tengo cuenta</b></div>
     </div>
   </div>
 
   <!-- ============ APP (con topbar) ============ -->
   <div id="app-shell" class="hidden">
     <div class="topbar">
-      <div class="brand"><span class="logo">🌿</span><span>ReciStation</span></div>
+      <div class="brand"><span class="logo">🌿</span><span>Guacamayos</span></div>
       <div class="navpills">
         <button class="pill" data-view="stations">🏠</button>
         <button class="pill" data-view="history">📜</button>
         <button class="pill hidden" id="nav-admin" data-view="admin">⚙️</button>
-        <button class="pill" id="btn-logout">🚪</button>
+        <button class="pill hidden" id="btn-account">👤 Ingresar</button>
+        <button class="pill hidden" id="btn-logout">🚪</button>
       </div>
     </div>
 
@@ -349,7 +379,7 @@
 
       <!-- ---------- HISTORIAL ---------- -->
       <section id="view-history" class="hidden">
-        <div class="greeting"><h2>Tu historial 📜</h2><p>Todo lo que has reciclado con ReciStation.</p></div>
+        <div class="greeting"><h2>Tu historial 📜</h2><p>Todo lo que has reciclado con Guacamayos.</p></div>
         <div id="history-list"></div>
       </section>
 
@@ -385,7 +415,7 @@
 
 <script type="module">
 /* =========================================================================
-   RECISTATION — App de separado y pesaje de material reciclado
+   GUACAMAYOS — App de separado y pesaje de material reciclado
    Fase actual: SIMULACIÓN en el navegador (sin Raspberry Pi / PLC real aún).
    El PLC Siemens corre en TIA Portal + Automation Studio; cuando esa parte
    esté lista, solo hay que reemplazar la función simulateTick() por los
@@ -482,6 +512,25 @@ function money(n){ return "$" + n.toFixed(2); }
    ------------------------------------------------------------------------- */
 $("go-register").onclick = () => showOnly("view-register");
 $("go-login").onclick = () => showOnly("view-login");
+$("go-guest").onclick = () => enterAsGuest();
+$("go-guest-2").onclick = () => enterAsGuest();
+$("btn-account").onclick = () => { $("app-shell").classList.add("hidden"); showOnly("view-login"); };
+
+function enterAsGuest(){
+  currentUser = null;
+  isAdmin = false;
+  $("view-loading").classList.add("hidden");
+  $("view-login").classList.add("hidden");
+  $("view-register").classList.add("hidden");
+  $("nav-admin").classList.add("hidden");
+  $("btn-account").classList.remove("hidden");
+  $("btn-logout").classList.add("hidden");
+  $("greet-name").textContent = "Hola 👋";
+  Promise.all([cargarPrecios(), cargarEstaciones()]).then(() => {
+    $("app-shell").classList.remove("hidden");
+    showAppView("stations");
+  });
+}
 
 $("btn-login").onclick = async () => {
   const email = $("login-email").value.trim();
@@ -556,6 +605,8 @@ onAuthStateChanged(auth, async (user) => {
     const tokenResult = await user.getIdTokenResult(true);
     isAdmin = tokenResult.claims.admin === true;
     $("nav-admin").classList.toggle("hidden", !isAdmin);
+    $("btn-account").classList.add("hidden");
+    $("btn-logout").classList.remove("hidden");
 
     let nombre = user.displayName;
     if(!nombre){
@@ -570,9 +621,16 @@ onAuthStateChanged(auth, async (user) => {
     ["view-loading","view-login","view-register"].forEach(v => $(v)?.classList.add("hidden"));
     showAppView("stations");
   } else {
+    // Sin sesión: no forzamos login, la app queda disponible como invitado.
     currentUser = null; isAdmin = false;
-    $("app-shell").classList.add("hidden");
-    showOnly("view-login");
+    $("nav-admin").classList.add("hidden");
+    $("btn-account").classList.remove("hidden");
+    $("btn-logout").classList.add("hidden");
+    $("greet-name").textContent = "Hola 👋";
+    await Promise.all([cargarPrecios(), cargarEstaciones()]);
+    $("app-shell").classList.remove("hidden");
+    ["view-loading","view-login","view-register"].forEach(v => $(v)?.classList.add("hidden"));
+    showAppView("stations");
   }
 });
 
@@ -732,7 +790,26 @@ $("btn-cancel-session").onclick = () => {
 
 $("btn-finish-session").onclick = async () => {
   if(simInterval) clearInterval(simInterval);
+  if(!currentUser){
+    $("modal-register-overlay").classList.remove("hidden");
+    return;
+  }
   await finalizarYGuardar();
+};
+
+$("modal-continue-guest").onclick = async () => {
+  $("modal-register-overlay").classList.add("hidden");
+  await finalizarYGuardar();
+};
+$("modal-go-register").onclick = () => {
+  $("modal-register-overlay").classList.add("hidden");
+  $("app-shell").classList.add("hidden");
+  showOnly("view-register");
+};
+$("modal-go-login").onclick = () => {
+  $("modal-register-overlay").classList.add("hidden");
+  $("app-shell").classList.add("hidden");
+  showOnly("view-login");
 };
 
 async function finalizarYGuardar(){
@@ -752,8 +829,8 @@ async function finalizarYGuardar(){
   });
 
   const registro = {
-    uid: currentUser.uid,
-    nombreUsuario: currentUser.displayName || "Reciclador",
+    uid: currentUser ? currentUser.uid : null,
+    nombreUsuario: currentUser ? (currentUser.displayName || "Reciclador") : "Invitado",
     estacionId: sesion.estacionId,
     estacionNombre: sesion.estacionNombre,
     materiales: materialesFinal,
@@ -761,11 +838,15 @@ async function finalizarYGuardar(){
     fecha: serverTimestamp()
   };
 
-  try{
-    await addDoc(collection(db, "registros"), registro);
-  }catch(e){
-    console.error(e);
-    toast("⚠️ No se pudo guardar el registro, revisa tu conexión.");
+  if(currentUser){
+    try{
+      await addDoc(collection(db, "registros"), registro);
+    }catch(e){
+      console.error(e);
+      toast("⚠️ No se pudo guardar el registro, revisa tu conexión.");
+    }
+  } else {
+    toast("ℹ️ Pesaje calculado sin guardar (modo invitado).");
   }
 
   renderSummary(registro);
@@ -800,6 +881,14 @@ $("btn-summary-history").onclick = () => { renderHistorial(); showAppView("histo
    ------------------------------------------------------------------------- */
 async function renderHistorial(){
   const cont = $("history-list");
+  if(!currentUser){
+    cont.innerHTML = `<div class="empty-state"><div class="e">🔒</div>Crea una cuenta gratis para guardar y ver tu historial de pesajes.<br><br><button class="btn btn-primary" id="btn-history-register" style="max-width:220px; margin:0 auto;">Crear cuenta</button></div>`;
+    $("btn-history-register").onclick = () => {
+      $("app-shell").classList.add("hidden");
+      showOnly("view-register");
+    };
+    return;
+  }
   cont.innerHTML = `<div class="spinner"></div>`;
   try{
     const q = query(collection(db, "registros"), where("uid", "==", currentUser.uid), orderBy("fecha", "desc"));

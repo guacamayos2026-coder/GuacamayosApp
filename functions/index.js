@@ -22,15 +22,18 @@
  *   await setAdminRole({ uid: "UID_DEL_USUARIO", isAdmin: true });
  */
 
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
+const { onCall, HttpsError } = require("firebase-functions/v2/https");
+const { initializeApp } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
 
-admin.initializeApp();
+const app = initializeApp();
 
-exports.setAdminRole = functions.https.onCall(async (data, context) => {
+exports.setAdminRole = onCall(async (request) => {
+  const { auth, data } = request;
+
   // Solo un admin existente puede llamar esta función.
-  if (!context.auth || context.auth.token.admin !== true) {
-    throw new functions.https.HttpsError(
+  if (!auth || auth.token.admin !== true) {
+    throw new HttpsError(
       "permission-denied",
       "Solo un administrador existente puede asignar el rol de admin."
     );
@@ -38,10 +41,10 @@ exports.setAdminRole = functions.https.onCall(async (data, context) => {
 
   const { uid, isAdmin } = data;
   if (!uid || typeof uid !== "string") {
-    throw new functions.https.HttpsError("invalid-argument", "Falta el uid del usuario.");
+    throw new HttpsError("invalid-argument", "Falta el uid del usuario.");
   }
 
-  await admin.auth().setCustomUserClaims(uid, { admin: !!isAdmin });
+  await getAuth(app).setCustomUserClaims(uid, { admin: !!isAdmin });
 
   return { success: true, uid, admin: !!isAdmin };
 });
